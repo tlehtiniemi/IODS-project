@@ -1,7 +1,6 @@
----
-title: "I have no idea what this project is about."
-author: "Tuukka Lehtiniemi"
----
+#IODS: Chapter 1
+###Tuukka Lehtiniemi
 
-##Link
+I have no idea what this project is about
+
 This project is available at GitHub repository <https://github.com/tlehtiniemi/IODS-project>
