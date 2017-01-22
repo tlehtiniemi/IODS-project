@@ -1,6 +1,5 @@
-#IODS: Chapter 1
-###Tuukka Lehtiniemi
+#Chapter 1: About the project
 
-I have no idea what this project is about
-
-This project is available at GitHub repository <https://github.com/tlehtiniemi/IODS-project>
+The project started on 19 January 2017. Updates will be available here: <https://github.com/tlehtiniemi/IODS-project>  
+  
+![](http://i1.kym-cdn.com/photos/images/original/000/234/739/fa5.jpg)

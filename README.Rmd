@@ -1,0 +1,10 @@
+---
+title: "Readme"
+author: "Tuukka Lehtiniemi"
+date: "1/22/2017"
+output: html_document
+---
+
+"Introduction to open data science" course at University of Helsinki, Spring 2017.
+
+Project diary: <https://tlehtiniemi.github.io/IODS-project/>

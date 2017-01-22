@@ -1,8 +1,9 @@
 ---
-title: "IODS course project"
+title: "IODS course diary"
+author: "Tuukka Lehtiniemi"
 output:
   html_document:
-    theme: cosmo
+    theme: spacelab
     toc: true
     toc_depth: 2
     fig_caption: true
