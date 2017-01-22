@@ -1,6 +1,6 @@
 ---
 title: "IODS course diary"
-author: "Tuukka Lehtiniemi"
+author: "tlehtiniemi"
 output:
   html_document:
     theme: spacelab
