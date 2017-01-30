@@ -1,7 +1,60 @@
 # Chapter 2: Regression and model validation
 
-*Describe the work you have done this week and summarize your learning.*
+Let's first read data from the local file into a data frame
+```{r}
+learning2014 <- read.table("/Users/lehtint9/IODS-project/data/learning2014.txt")
+```
+Next let's have a look a the dimensions and structure of the data set
+```{r}
+dim(learning2014)
+str(learning2014)
+```
+The data frame has 166 observations of 7 variables. The variables are gender (female or male), age, four attributes (attitude, deep, stra, surf) and the total points.
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using  
+To examine the variables, let us print a summary of them. This show overview statistics of all variables.
+```{r}
+summary(learning2014)
+```
+We will need the following additional libraries to analyse the data graphically:
+```{r}
+library(GGally)
+library(ggplot2)
+```
+To explore the variables graphically and specifically the relationships between them, we will draw an overview plot matrix with ggpairs
+```{r}
+p <- ggpairs(learning2014, mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)))
+p
+```
+The `gender` distribution is clearly skewed, `age` as well (as expected with what I assume are university students). `age` does not significantly correlate with any of the variables.
+
+The three highest linear correlations (in terms of abosulte value) with the `points` variable are in `attitude` (0.437), `stra` (0.146) and `surf` (-0.144), however correlations between `points` and `stra` & `surf` are rather low. `surf` seems to be to some extent correlated with `attitude` (-0.176) and `stra` (-0.161). Correlation between `stra` and `attitude` is low (0.0617).
+
+Based on the observations on correlations, let's regress `points` on `attitude`, `stra` and `surf` and print out a summary of the model
+```{r}
+my_model <- lm(points ~ attitude + stra + surf, data = learning2014)
+summary(my_model)
+```
+The statistically significant coefficients are the `intercept` (at 0.01 level) and `attitude` (at 0.001 level). 
+
+As `stra` and `surf` were not statistically significant explanatory variables, let's remove them from the model
+```{r}
+my_model2 <- lm(points ~ attitude, data = learning2014)
+summary(my_model2)
+```
+This had a small impact on the remaining coefficients and diminished the R-squared by a small amount (as expected) in comparison to the previous model. Now the `intercept` and `attitude` coefficients are both significant at 0.001 level. As the `intercept` coefficient is 11.6, a person with zero `attitude` would get 11.6 `points` according to the model. Thereafter each unit increase in `attitude` increases the `points` by about 0.35 according to the model. As per the multiple R-squared diagnostic, this model is capable of explaining about 19% of the variability of `points` variable around its mean.
+
+Let's plot this model to aid in diagnostics.
+```{r}
+qplot(attitude, points, data = learning2014) + geom_smooth(method = "lm")
+```
+
+Now on to diagnostics of the model.
+```{r}
+par(mfrow = c(2,2))
+plot(my_model2, c(1, 2, 5))
+```
+Residuals seem to be somewhat correlated with model predictions. Visually, the residuals seem smaller the higher the model predictions are, apart from a few outliers. This would indicate that the *constant variance of errors* assumption does not hold. On a visual inspection, even though it exists, this effect is not very severe.
+
+Based on the QQ plot, the errors are not exactly normally distributed. Even though the errors follow the theoretical errors closely for low and mid-range errors (in absolute terms), the errors deviate from the line in the high end (in absolute terms) of the error distribution. The deviations however are comparatively low.
+
+On the residuals vs leverage plot, we see that there are some obervations with comparatively high leverage. These are likely the ones with very low attitude and very low points, as they would "pull" the regression line downwards from the low end. However the leverage coefficients are not high in absolute terms for any observation. Therefore we sould probably not be too much worried about outliers.
