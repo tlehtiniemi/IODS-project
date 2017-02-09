@@ -1,4 +1,178 @@
 # Chapter 3: Logistic regression
 
+Again let's first load libraries and read data from the local file into a data frame
+```{r}
+library(dplyr); library(ggplot2); library(boot)
+alc <- read.table("/Users/lehtint9/IODS-project/data/Ch3_alc.csv", sep=";", header=TRUE)
+```
 
 
+## Load and explore data
+
+The data contains responses to a survey for students of two classes. It has demographic  and backrground variables, information about freetime and studies, and about alcohol consumption.
+
+It has 35 variables for 382 students. 
+```{r}
+```
+
+Variable names are
+```{r}
+dim(alc)
+colnames(alc)
+```
+
+## Exploration of variables to study
+
+In this exercise we are interested in the alcohol consumption of students. We'll start with the hyptohesis that four variables are related to alcohol consumption. It seems reasonable that the following variables could have a connection with alcohol consumption:
+
+1. Gender of the student. Hypothesis: males consume more alcohol. `sex` is the student's sex (binary: 'F' - female or 'M' - male) (factor variable)
+2. Romantic relationship. Hypothesis: a romantic relationships is associated with less alcohol consumption. `romantic` tells if there is a romantic relationship (binary: yes or no) (factor variable)
+3. The time spent in studies. Hypothesis: more time spent in studies, less alcohol consumption. the variable `studytime` is the weekly study time (numeric: 1 - <2 hours, 2 - 2 to 5 hours, 3 - 5 to 10 hours, or 4 - >10 hours) 
+4. Quality of family relations. Hypothesis: better quality, less alcohol. `famrel` is the quality of family relationships (numeric: from 1 - very bad to 5 - excellent)
+
+```{r}
+g1a <- ggplot(data = alc, aes(x=high_use, col=sex))
+g1b <- g1a+geom_bar()+facet_wrap("sex")
+g1b
+```
+
+There seems to be proportionally more high alcohol users in males than in females. Let's look at this in cross-tabulation also. High use is on rows, gender on columns. There are proportionally more male high users.
+
+```{r}
+mytable <- table(alc$high_use, alc$sex)
+mytable # print table 
+prop.table(mytable, 2) # column percentages
+```
+
+Let's look at all the other variables in relation to both `high_use` and `sex`.
+
+First `romantic` relations.
+
+```{r}
+mytable <- table(alc$high_use, alc$romantic)
+mytable # print table 
+prop.table(mytable, 2) # column percentages
+```
+
+A higher percentage of those who are not in `romantic` relations are high alcohol users. The effect seems small though, but we'll know more later. Let's visualize this too.
+
+```{r}
+g2a <- ggplot(data = alc, aes(x=high_use, col=sex))
+g2b <- g2a+geom_bar()+facet_wrap("romantic")+ggtitle("Romantic relation, high alcohol use and gender")
+g2b
+```
+
+Next, `studytime`
+
+```{r}
+alc %>% group_by(sex, high_use) %>% summarise(count = n(), mean_studytime = mean(studytime))
+```
+
+With both males and females, studytimes are higher on the average with non-high-users. In males the average studytimes are lower overall than in females. 
+
+Then family relations or `famrel`.
+
+```{r}
+alc %>% group_by(sex, high_use) %>% summarise(count = n(), mean_famrel = mean(famrel))
+```
+
+With both males and females, family relations are better on the average with non-high-users. In males the difference in mean family realtions of high users and non-high users is higher.
+
+## Logistic regressions of chosen variables
+
+Let's fit a logistic model to the `high_use` data. We are fitting the model to find what factors are correlated with higher alcohol consumption among students. 
+
+```{r}
+m <- glm(high_use ~ sex + romantic + studytime + famrel, data = alc, family = "binomial")
+summary(m)
+```
+
+Model summary shows that two of the variables are significant at the 0.01 level: gender and studytime. Family relations are significant at the 0.05 level. `romantic` relations did not have astatistically significant effect. Effect of `sex` was so that being male had a positive correlation with high alcohol use. `studytime` and `famrel` had a negative correlation; more studying and better family relations were correlated with less alcohol consumption. The directions of the statistically significant (0.01 or 0.05 level) effects were as hypothesized initially.
+
+Below, the result of fitting the model are presented as odds ratios. This means that a unit change in the explanatory variable (vs. no change) changes the odds of high alcohol use by the corresponding odds ratio. Also confidence intervals are printed out.
+
+```{r}
+OR <- coef(m) %>% exp
+CI <- confint(m) %>% exp
+cbind(OR, CI)
+```
+
+According to the model, males have the odds ratio of about 2, meaning that there's a twofold chance of a male being high consumer of alcohol compared to a female.
+
+`romantic` relations were not a statistically significant explanatory variable. As an additional note, in the odds ratios, we also see that the 95% confidence interval spans from 0.52 to 1.44, which indicates ambiquous relationship to alcohol consumption.
+
+A unit increase in the `studytime` variable leads to 0.62-fold odds to consume more alcohol. A unit increase in family relations or `famrel` variable leads to 0.74-fold odds to consume more alcohol. Both have a negative effect to the odds of `high_use`, but practical interpretation of the effect is difficult due to the categorical nature of these variables. In particular, `studytime` is not in hours but is categorised with non-uniform intervals of hours, so this result should be interpreted in terms of jumps from category to another.
+
+Let's now refit the model, leaving out `romantic` relations - as important as they are in real life, they are not statistically significant in this case.
+
+```{r}
+m2 <- glm(high_use ~ sex + studytime + famrel, data = alc, family = "binomial")
+summary(m2)
+```
+
+The summary statistics look as expected. `famrel` is significant only on 0.05 level, but let's keep it in the model anyway.
+
+## Predictive power of the model
+
+Now we'll predict high use using this new model. We know the actual values of `high_use`, so we can compare those to predictions. Ideally there's nothing on contradictory cells of the confusion matrix:
+
+```{r}
+model_prob <- predict(m2, type = "response")
+alc <- mutate(alc, high_use_prob = model_prob)
+alc <- mutate(alc, high_use_pred = high_use_prob>0.5)
+table(high_use = alc$high_use, prediction = alc$high_use_pred)
+```
+
+Quite a few false negatives in the predictions. Let's visualize the results a bit more.
+
+```{r}
+g <- ggplot(alc, aes(x = high_use_prob, y = high_use, col=high_use_pred))
+g+geom_point()
+table(high_use = alc$high_use, high_use_pred = alc$high_use_pred) %>% prop.table() %>% addmargins()
+```
+
+which basically tells the same story. The model predicts too many negatives. High training error at 0,43. Not a good prediction! Very bad. Sad!
+
+To quantify this a bit, we'll define a loss function and use it to compare predictions to simple guesswork.
+
+```{r}
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+```
+
+Now the guesswork: let's guess that there are no high users of alcohol. The loss function is 
+
+```{r}
+loss_func(class = alc$high_use, prob = 0)
+```
+
+And then let's use the actual predictions. Now the loss function is
+
+```{r}
+loss_func(class = alc$high_use, prob = alc$high_use_prob)
+```
+
+Using this measure, the guesswork is actually a little bit better! So the model was actually really sad.
+
+## Cross validation and a better model
+
+Let's perform 10-fold cross validation on the model and print out the loss function for it.
+
+```{r}
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m2, K = 10)
+cv$delta[1]
+```
+
+So this model performed worse than the model in datacamp, loss function .306 versus in datacamp .26.
+
+What would be a better model? One way to approach this would be to start from the moel in datacamp (predictors were `failures`, `absences`, and `sex`) and add a predictor that increases the predictive power of the model. In this exercise, the "best" variable used as a predictor was `studytime`. Let's add that to the model, perform the cross validation and print out the loss function.
+
+```{r}
+m3 <- glm(high_use ~ sex + failures + absences + studytime, data = alc, family = "binomial")
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m3, K = 10)
+cv$delta[1]
+```
+
+And voila, we have a better model (.24) than in the datacamp exercise (.26)!
