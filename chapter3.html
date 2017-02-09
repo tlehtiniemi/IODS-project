@@ -332,13 +332,13 @@ g+geom_point()</code></pre>
 <p>Let’s perform 10-fold cross validation on the model and print out the loss function for it.</p>
 <pre class="r"><code>cv &lt;- cv.glm(data = alc, cost = loss_func, glmfit = m2, K = 10)
 cv$delta[1]</code></pre>
-<pre><code>## [1] 0.3036649</code></pre>
+<pre><code>## [1] 0.3010471</code></pre>
 <p>So this model performed worse than the model in datacamp, loss function .306 versus in datacamp .26.</p>
 <p>What would be a better model? One way to approach this would be to start from the moel in datacamp (predictors were <code>failures</code>, <code>absences</code>, and <code>sex</code>) and add a predictor that increases the predictive power of the model. In this exercise, the “best” variable used as a predictor was <code>studytime</code>. Let’s add that to the model, perform the cross validation and print out the loss function.</p>
 <pre class="r"><code>m3 &lt;- glm(high_use ~ sex + failures + absences + studytime, data = alc, family = &quot;binomial&quot;)
 cv &lt;- cv.glm(data = alc, cost = loss_func, glmfit = m3, K = 10)
 cv$delta[1]</code></pre>
-<pre><code>## [1] 0.2486911</code></pre>
+<pre><code>## [1] 0.2539267</code></pre>
 <p>And voila, we have a better model (.24) than in the datacamp exercise (.26)!</p>
 </div>
 </div>
