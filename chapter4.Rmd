@@ -1,0 +1,137 @@
+# Chapter 4: Clustering and classification
+
+## The Boston data
+
+In this Chapter, we will be using a dataset on suburbs of Boston. We are aiming to employ classification and clustering on the dataset. In classification, we know the classes, and aim to fit a model that can classify observations into these classes based on other variables. We will classify the suburbs according to their crime rate. In clustering, we are trying to find similar groups or clusters of observations withouth prior knowledge of the clusters.
+
+Let's first load the libraries needed in this Chapter.
+
+```{r}
+library(MASS)
+library(dplyr)
+library(corrplot)
+```
+
+The dataset is included in the MASS package. Let's load the `Boston` dataset and explore it's contents. 
+
+```{r}
+data("Boston")
+str(Boston)
+summary(Boston)
+```
+
+The dataset has 14 variables and 506 observations. The variables describe characteristics of 506 suburbs of Boston, including the crime rate `crim` that we will use for classification, and 13 other variables.
+
+We are most interested in the 'crim' variable that descibers the per capita crime rate of the area. The crime rate is a continuous variable that varies highly between areas: the max crime rate is really high compared to the median crime rate. Looking at the quantiles, we can see that this is partly due to outliers, as the 3rd quantile is much smaller than the max value. We note that also the 3rd quantile is already very high compared to the minimum value.
+
+Also some of the other variables have uneven distributions: e.g. `black` (scaled proportion of blacks), `indus` (proportion of non-retail business acres), `age` (proportion of owner-occupied units built prior to 1940) and `lstat` (lower status of the population (percent)). 
+
+To explore the relations between the variables of the dataset, let's print out pairwise scatter plots and a correlation plot.
+
+```{r}
+pairs(Boston)
+cor_matrix<-cor(Boston) %>% round(2)
+corrplot.mixed(cor_matrix)
+```
+
+By visual inspection, the crime rate is correlated with many of the variables. Again, since the crime rate is (and other variables are) highly variable, it is not easy to interpret the correlations from scatter plots. However, from the correlation plot, crime rate is negatively correlated with e.g. housing values and distances to employment centers, and positively correlated with e.g. access to radian highways `rad` and property tax rate `tax`. High correlation among other variables than `crim` are also found.
+
+## Scaling the dataset and categorising crime rate
+
+LDA assumes that the variables are normally distributed and have the same variance. therefore, we'll next standardize the dataset by subtracting the mean of the variable from each observation, and dividing this with the standard deviation of the variable.
+
+```{r}
+boston_scaled <- as.data.frame(scale(Boston))
+summary(boston_scaled)
+```
+
+The above summary of the scaled dataset shows that this scaling evened out the variability of some of the variables, particularly the crime rate.
+
+In order to make use of the crime rate in classification, it needs to be a categorical variable. Let's replace the `crim` variable with a categorical version of the crime rate, or the `crime` variabel, by categorising `crim` into its quartiles. The `crime` categories are labeled low, med_low, med_high and high.
+
+```{r}
+scaled_crim <- boston_scaled$crim
+bins <- quantile(scaled_crim)
+crime <- cut(scaled_crim, breaks = bins, include.lowest = TRUE, label = c("low", "med_low", "med_high", "high"))
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+boston_scaled <- data.frame(boston_scaled, crime)
+```
+
+## Fitting the LDA model
+
+We'll use an LDA model to classify the suburbs into crime rate classes. First we divide the dataset into a training dataset and a test dataset. We will perform classification on the training dataset, and then employ the test dataset to see how well the classification performs on new data. We do this by picking random 80% of the dataset for the training dataset, and then leave the rest as the test dataset. Test dataset does not inlude the crime rates; these are stored separately.
+```{r}
+n <- nrow(boston_scaled)
+ind <- sample(n,  size = n * 0.8)
+train <- boston_scaled[ind,]
+test <- boston_scaled[-ind,]
+correct_classes <- test$crime
+test <- dplyr::select(test, -crime)
+```
+
+Now we'll use LDA classification to fit a model that classifies the training dataset into the `crime` classes. We make use of the lda.arrows function as presented in the datacamp exercise in order to print out a biplot, that is, a plot that shows a scatter plot of the classes according to the .
+
+```{r}
+lda.fit <- lda(crime ~ ., data = train)
+
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+classes <- as.numeric(train$crime)
+plot(lda.fit, dimen = 2, col=classes, pch = classes)
+lda.arrows(lda.fit, myscale = 1)
+```
+
+## Predicting with the LDA model
+
+Now we'll predict the crime rates of the test dataset based on the model fitted on the training dataset.
+
+```{r}
+lda.pred <- predict(lda.fit, newdata = test)
+table(correct = correct_classes, predicted = lda.pred$class)
+```
+
+Most of the predictions are at the diagonal of the cross tabulation. Prediction error was about 25%. This is probably an ok result
+
+## K-means clustering
+
+With K-means clustering, we are aiming to find clusters of similar observations from the data, without prior knowledge of these clusters. For clustering, we'll use the scaled Boston dataset, so that the distances are comparable. The following print out summaries of the Euclidian and Manhattan distances matrices of the scaled Boston dataset. Euclidian in the geometric distance, Manhattan is the distane measured along the axes.
+
+```{r}
+boston_clusters <- as.data.frame(scale(Boston))
+dist_eu <- dist(boston_clusters)
+summary(dist_eu)
+dist_man <- dist(boston_clusters, method="manhattan")
+summary(dist_man)
+```
+
+Not surprisingly, Manhattan distances are higher.
+
+Let's perform the K-means clustering with Euclidian distances and K=2 clusters
+
+```{r}
+km <-kmeans(dist_eu, centers = 2)
+pairs(Boston, col = km$cluster)
+```
+
+For the purpose of finding optimal number of clusters, we'll explore the total within cluster sum of squares (twcss) with the number of clusters ranging from 1 to 10.
+
+```{r}
+k_max <- 10
+twcss <- sapply(1:k_max, function(k){kmeans(dist_eu, k)$tot.withinss})
+plot(1:k_max, twcss, type='b')
+```
+
+The interpretation the the twcss number is, that the optimal number of clusters is when the twcss drops radically. There, it obviously drops radically when K changes from 1 to 2. Also 2 to 3 might be interpreted as a radical drop (it's about 25% of twcss). Drop from 3 to 4 is not radical anymore.Therefore we'll stick to K=3 as the optimal.
+
+```{r}
+km <-kmeans(dist_eu, centers = 3)
+pairs(Boston, col = km$cluster)
+```
+
