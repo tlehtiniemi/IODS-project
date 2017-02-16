@@ -10,6 +10,7 @@ Let's first load the libraries needed in this Chapter.
 library(MASS)
 library(dplyr)
 library(corrplot)
+library(NbClust)
 ```
 
 The dataset is included in the MASS package. Let's load the `Boston` dataset and explore it's contents. 
@@ -104,6 +105,7 @@ Most of the predictions are at the diagonal of the cross tabulation. Prediction 
 With K-means clustering, we are aiming to find clusters of similar observations from the data, without prior knowledge of these clusters. For clustering, we'll use the scaled Boston dataset, so that the distances are comparable. The following print out summaries of the Euclidian and Manhattan distances matrices of the scaled Boston dataset. Euclidian in the geometric distance, Manhattan is the distane measured along the axes.
 
 ```{r}
+set.seed(123)
 boston_clusters <- as.data.frame(scale(Boston))
 dist_eu <- dist(boston_clusters)
 summary(dist_eu)
@@ -113,10 +115,10 @@ summary(dist_man)
 
 Not surprisingly, Manhattan distances are higher.
 
-Let's perform the K-means clustering with Euclidian distances and K=2 clusters
+Let's perform the K-means clustering with Euclidian distances and K=3 clusters
 
 ```{r}
-km <-kmeans(dist_eu, centers = 2)
+km <-kmeans(dist_eu, centers = 3)
 pairs(Boston, col = km$cluster)
 ```
 
@@ -128,10 +130,21 @@ twcss <- sapply(1:k_max, function(k){kmeans(dist_eu, k)$tot.withinss})
 plot(1:k_max, twcss, type='b')
 ```
 
-The interpretation the the twcss number is, that the optimal number of clusters is when the twcss drops radically. There, it obviously drops radically when K changes from 1 to 2. Also 2 to 3 might be interpreted as a radical drop (it's about 25% of twcss). Drop from 3 to 4 is not radical anymore.Therefore we'll stick to K=3 as the optimal.
+The interpretation the the twcss number is, that the optimal number of clusters is when the twcss drops radically. There, it obviously drops radically when K changes from 1 to 2. Also 2 to 3 might be interpreted as a radical drop (the situation depends on the locations of the initial (random) cluster centers, but this drop was about 25% of twcss when initial centers were assigned using the set.seed(123) function as above). We could stick to K=2 as the optimal, but this is debatable.
+
+So how to determine the number of clusters? Let's run a set of tests to see if we can find some consensus. Used in this way, NbClust performs a number of tests and reports the best number of clusters based on majority rule.
+
+```{r fig.keep="none"}
+nb_clusters <- NbClust(data = data.matrix(boston_scaled), distance = "euclidean", min.nc = 2, max.nc = 15, method = "kmeans", index = "all")
+```
+
+So let's use K=2 as the optimal number of clusters.
 
 ```{r}
-km <-kmeans(dist_eu, centers = 3)
+km <-kmeans(dist_eu, centers = 2)
 pairs(Boston, col = km$cluster)
 ```
 
+With K=2 clusters, we can see from the pairwise scatter plots that some of the variables are clearly divided between the clusters (in the sense of these pairwise plots), some are not.
+
+The crime rate, for example, is clearly divided so that one of the clusters inlcudes only low rime rates, the other inlcludes both low and high crime rates. Some of the other variables are  clearly dichotomous in when plotted against others - for example, `rad` and `tax` feature such tendency.
