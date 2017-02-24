@@ -31,6 +31,7 @@ library(corrplot)
 ggpairs(human)
 cor(human) %>% corrplot.mixed()
 ```
+
 From the plots, it is clear that there are rather strong correlations between six variables variables in the dataset. The strongest positive correlations are found between expected years of schooling and life expectancy (`Edu.Exp` and `Life.Exp`) as well as maternal mortality and adolescent birth rate (`Mat.Mor` and `Ado.Birth`). The strongest negative correlations are found between the above-mentioned strongly positively correlated variables and the strongly negatively correlated ones. Interestingly, two variables (`Labo.FM` and `Parli.F`) are only weakly correlated with any of the other variables.
 
 ## PCA of the dataset
@@ -60,7 +61,8 @@ human_std <- scale(human)
 pca_human_std <- prcomp(human_std)
 biplot(pca_human_std, choices = 1:2, cex=c(0.7, 1), col = c("grey40", "deeppink2"))
 ```
-These CA results are clearly different from the results of PCA on non-standardized dataset: GNI does not dominate the variance anymore, and the results make much more "sense".   
+
+These PCA results are clearly different from the results of PCA on non-standardized dataset: GNI does not dominate the variance anymore, and the results make much more "sense".   
 
 Interpreting the results of PCA from the bilplot, we see that
 
