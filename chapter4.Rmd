@@ -46,7 +46,7 @@ boston_scaled <- as.data.frame(scale(Boston))
 summary(boston_scaled)
 ```
 
-The above summary of the scaled dataset shows that this scaling evened out the variability of some of the variables, particularly the crime rate.
+The above summary of the scaled dataset shows that now each variable now has a mean of 0, that is, the distribution is centered around zero. 
 
 In order to make use of the crime rate in classification, it needs to be a categorical variable. Let's replace the `crim` variable with a categorical version of the crime rate, or the `crime` variabel, by categorising `crim` into its quartiles. The `crime` categories are labeled low, med_low, med_high and high.
 

@@ -1,0 +1,114 @@
+# Chapter 5: Dimensionality reduction
+
+## The data 
+
+For this exercise we will use the "human"" dataset from the UNDP programme.
+The dataset has countries as row names. The dataset includes 155 observations of 8 variables.
+
+```{r}
+human <- read.csv("/Users/lehtint9/IODS-project/data/human.csv",row.names = 1, sep=",", header=TRUE)
+str(human)
+```
+
+The eight variables describe the health, knowledge and empowerment conditions in the countries.
+
+* `Edu2.FM` Proportion of females with at least secondary education divided by proportion of males with at least secondary education 
+* `Labo.FM` Proportion of females in the labour force divided by proportion of males in the labour force 
+* `Edu.Exp` Expected years of schooling 
+* `Life.Exp` Life expectancy at birth 
+* `GNI` Gross National Income per capita 
+* `Mat.Mor` Maternal mortality ratio 
+* `Ado.Birth` Adolescent birth rate 
+* `Parli.F` Percetange of female representatives in parliament 
+
+# Visualize and explore data
+
+```{r}
+library(GGally)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+ggpairs(human)
+cor(human) %>% corrplot.mixed()
+```
+From the plots, it is clear that there are rather strong correlations between six variables variables in the dataset. The strongest positive correlations are found between expected years of schooling and life expectancy (`Edu.Exp` and `Life.Exp`) as well as maternal mortality and adolescent birth rate (`Mat.Mor` and `Ado.Birth`). The strongest negative correlations are found between the above-mentioned strongly positively correlated variables and the strongly negatively correlated ones. Interestingly, two variables (`Labo.FM` and `Parli.F`) are only weakly correlated with any of the other variables.
+
+## PCA of the dataset
+
+PCA transforms the dataset into a new space. The dimensions of this new space are called the principal components of data. The first principal component captures the maximum amount of variance from the features of original data. Each suggessive principal component is orthogonal to the first (and other) components, and captures the maximum amount of variance left. 
+
+First we use the dataset as is and perform principal component analysis of it.
+
+```{r}
+pca_human <- prcomp(human)
+summary(pca_human)
+```
+
+As we already see from the model summary, the first principal component PC1 captures almost all of the variance in the data by itself. Let's plot the biplot to inspect the model visually.
+
+```{r warning=FALSE}
+biplot(pca_human, choices = 1:2, cex=c(0.7, 1), col = c("grey40", "deeppink2"))
+```
+
+We see from the biplot that the first principal componen, PC1, is practically identical to the `GNI` feature. The `GNI` arrow is much longer than the other arrows, reflecting its standard deviation. This is due to the variance of the `GNI` variable being really high compared to the other variables. Therefore, PCA ends up just explainen the variance of the data by the variance of `GNI`.
+
+## PCA of the standardised dataset
+Since PCA for the original data did not provide very good results, we'll sandardise the dataset so that the variances are equal.
+
+```{r}
+human_std <- scale(human)
+pca_human_std <- prcomp(human_std)
+biplot(pca_human_std, choices = 1:2, cex=c(0.7, 1), col = c("grey40", "deeppink2"))
+```
+These CA results are clearly different from the results of PCA on non-standardized dataset: GNI does not dominate the variance anymore, and the results make much more "sense".   
+
+Interpreting the results of PCA from the bilplot, we see that
+
+* Low values of PC1 describe countries with high expected years of schooling, high life expectancy, high female education compared to male education, and high GNI. Simultaneously, high values of PC1 describe countries with high maternal mortality ratio and high adolescent birth rate. The PC1 feature, then, could be interpreted to describe "inverse of standard of living".
+
+* High values of PC2 describe countries with high proportion of females in labor force compared to males, and hih percentage of females in parliament. The PC2 feature, then, could be interpreted to describe "Gender equality in society".
+
+These interpretations of PC and PC2 are, of course, rough descriptions of much more nuanced societal phenomena.
+
+## Tea data
+
+For the remaining part of the exercise we'll use the tea dataset from FactoMineR.
+
+```{r}
+library(FactoMineR)
+data(tea)
+str(tea)
+```
+The tea data has 300 observations of 36 variables. We'll pick some variables that seem interesting (places to drink tea, gender, and age groups) and visualise only these variables.
+
+```{r}
+library(tidyr)
+keep <- c("home", "work", "tearoom", "resto", "pub", "age_Q", "sex")
+tea_ <- dplyr::select(tea, one_of(keep))
+
+gather(tea_) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+```
+
+We'll also perform MCA for these variables.
+
+```{r}
+tea_mca <- MCA(tea_, graph = FALSE)
+summary(tea_mca)
+plot(tea_mca, invisible=c("ind"), habillage = "quali")
+```
+
+The first two dimensions of MCA explain about 30% of variance.
+
+The biplot for variables allows for some interpretation of tea drinking habits. For examples, we see that 
+
+* Drinking tea in pubs, restaurants tearooms are related - that is, the same people seem to drink tea in them.
+* The youngest (15-24 year olds) and the oldest (60+ year olds) tea drinkers have similar tea drinking habits.
+* Young adults seem to not drink tea at home, though otherwise their drinking habits are not explained by any one category.
+* Workers dink tea in restaurants. 
+* 45-59 year olds drink tea particularly at home.
+
+```{r}
+plot(tea_mca, invisible=c("var"), habillage = "quali")
+```
+
+The biplot for individuals mostly shows that it is pretty hard to interpret. We mainly see that there are a few outlier individuals. This might indicate that the MCA result is to some extent dependent on these outliers.
