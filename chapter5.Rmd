@@ -21,7 +21,7 @@ The eight variables describe the health, knowledge and empowerment conditions in
 * `Ado.Birth` Adolescent birth rate 
 * `Parli.F` Percetange of female representatives in parliament 
 
-# Visualize and explore data
+## Visualize and explore data
 
 ```{r}
 library(GGally)
